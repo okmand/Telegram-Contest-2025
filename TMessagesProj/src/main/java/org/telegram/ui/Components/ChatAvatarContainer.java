@@ -578,7 +578,8 @@ public class ChatAvatarContainer extends FrameLayout implements NotificationCent
                     fragment.setUserInfo(parentFragment.getCurrentUserInfo(), parentFragment.profileChannelMessageFetcher, parentFragment.birthdayAssetsFetcher);
                 }
                 if (fromChatAnimation) {
-                    fragment.setPlayProfileAnimation(byAvatar ? 2 : 1);
+                    int type = byAvatar ? 2 : 1;
+                    fragment.setPlayProfileAnimation(type);
                 }
                 parentFragment.presentFragment(fragment, removeLast);
             }

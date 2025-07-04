@@ -49,6 +49,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.NotificationsController;
+import org.telegram.messenger.R;
 import org.telegram.messenger.SecretChatHelper;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.UserConfig;
@@ -374,6 +375,7 @@ public abstract class BaseFragment {
             }
             if (parentLayout != null && actionBar == null) {
                 actionBar = createActionBar(parentLayout.getView().getContext());
+                actionBar.setId(R.id.action_bar);
                 if (actionBar != null) {
                     actionBar.parentFragment = this;
                 }
