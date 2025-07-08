@@ -7,12 +7,18 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.MotionEvent;
 import android.view.View;
@@ -159,7 +165,6 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
                     if (hasActiveVideo) {
                         position--;
                     }
-                    BackupImageView currentView = getCurrentItemView();
                     int count = getChildCount();
 
                     for (int a = 0; a < count; a++) {
@@ -252,7 +257,7 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
                 progressToCustomAvatar = 2f - progressToCustomAvatar;
             }
 
-            progressToCustomAvatar = Utilities.clamp(progressToCustomAvatar, 1f ,0);
+            progressToCustomAvatar = Utilities.clamp(progressToCustomAvatar, 1f, 0);
         }
         setCustomAvatarProgress(progressToCustomAvatar);
     }
@@ -286,8 +291,8 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
                 checkCustomAvatar(position, positionOffset);
                 if (positionOffsetPixels == 0) {
                     position = adapter.getRealPosition(position);
-                    BackupImageView currentView = getCurrentItemView();
                     int count = getChildCount();
+
                     for (int a = 0; a < count; a++) {
                         View child = getChildAt(a);
                         if (!(child instanceof BackupImageView)) {
@@ -425,7 +430,7 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
         if (pinchToZoomHelper != null && getCurrentItemView() != null) {
             if (action != MotionEvent.ACTION_DOWN && isDownReleased && !pinchToZoomHelper.isInOverlayMode()) {
                 pinchToZoomHelper.checkPinchToZoom(MotionEvent.obtain(0, 0, MotionEvent.ACTION_CANCEL, 0, 0, 0), this, getCurrentItemView().getImageReceiver(), null, null, null);
-            } else if (pinchToZoomHelper.checkPinchToZoom(ev, this, getCurrentItemView().getImageReceiver(), null, null,null)) {
+            } else if (pinchToZoomHelper.checkPinchToZoom(ev, this, getCurrentItemView().getImageReceiver(), null, null, null)) {
                 if (!isDownReleased) {
                     isDownReleased = true;
                     callback.onRelease();
@@ -1316,7 +1321,7 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
         imagesLocationsSizes.clear();
         imagesUploadProgress.clear();
         adapter.notifyDataSetChanged();
-        setCurrentItem(0 , false);
+        setCurrentItem(0, false);
         selectedPage = 0;
         uploadingImageLocation = null;
         prevImageLocation = null;
@@ -1373,6 +1378,9 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
         public boolean isVideo;
         private final int position;
         private final Paint placeholderPaint;
+
+        private final Paint blurPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+        private Bitmap blurredStrip;
 
         public AvatarImageView(Context context, int position, Paint placeholderPaint) {
             super(context);
@@ -1469,9 +1477,285 @@ public class ProfileGalleryView extends CircularViewPager implements Notificatio
             }
             super.onDraw(canvas);
 
+            Bitmap currentFrame = getImageReceiver().getBitmap();
+            addBlurredArea(canvas, currentFrame);
+
             if (radialProgress != null && radialProgress.getOverrideAlpha() > 0f) {
                 radialProgress.draw(canvas);
             }
+        }
+
+        private void addBlurredArea(Canvas canvas, Bitmap currentFrame) {
+            if (currentFrame == null || currentFrame.getHeight() <= 0) {
+                return;
+            }
+
+            int imageWidth = currentFrame.getWidth();
+            int imageHeight = currentFrame.getHeight();
+            int blurSourceHeight = (int) (imageHeight * 0.15);
+
+            // Recreate blur only if necessary
+            if (blurredStrip == null || blurredStrip.getWidth() != imageWidth || blurredStrip.getHeight() != blurSourceHeight) {
+                try {
+                    Bitmap bottomCrop = Bitmap.createBitmap(currentFrame, 0, imageHeight - blurSourceHeight, imageWidth, blurSourceHeight);
+                    blurredStrip = fastBlur(bottomCrop, 0.2f, 4);
+                } catch (Throwable t) {
+                    Log.e("ProfileGalleryView", "Failed to crop/blur: " + t);
+                    return;
+                }
+            }
+
+            if (blurredStrip == null) {
+                return;
+            }
+
+            int viewHeight = getHeight();
+            int viewWidth = getWidth();
+
+            int blurCanvasHeight = (int) (viewHeight * 0.15);
+            int transitionHeight = (int) (viewHeight * 0.12);
+
+            int blurStartY = viewHeight - blurCanvasHeight;
+            int transitionStartY = blurStartY - transitionHeight;
+
+            int blurredStripHeight = blurredStrip.getHeight();
+            int blurredStripWidth = blurredStrip.getWidth();
+
+            // Draw fully blurred area (bottom part)
+            int blurSrcTop = blurredStripHeight * transitionHeight / (transitionHeight + blurCanvasHeight);
+            android.graphics.Rect srcSolid = new android.graphics.Rect(0, blurSrcTop, blurredStripWidth, blurredStripHeight);
+            RectF dstSolid = new RectF(0, blurStartY, viewWidth, viewHeight);
+            canvas.drawBitmap(blurredStrip, srcSolid, dstSolid, blurPaint);
+
+            android.graphics.Rect srcFade = new android.graphics.Rect(0, 0, blurredStripWidth, blurSrcTop);
+            RectF dstFade = new RectF(0, transitionStartY, viewWidth, blurStartY);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // Draw fading transition from transparent to blur
+                final int saveCount = canvas.saveLayer(0, transitionStartY, viewWidth, blurStartY, null);
+
+                canvas.drawBitmap(blurredStrip, srcFade, dstFade, blurPaint);
+
+                // Apply gradient alpha mask
+                Paint gradientPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                Shader gradient = new LinearGradient(
+                        0, transitionStartY, 0, blurStartY,
+                        0x00FFFFFF, 0xFFFFFFFF,
+                        Shader.TileMode.CLAMP
+                );
+                gradientPaint.setShader(gradient);
+                gradientPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+                canvas.drawRect(0, transitionStartY, viewWidth, blurStartY, gradientPaint);
+
+                canvas.restoreToCount(saveCount);
+            } else {
+                // Optional fallback: just draw the blurred part without gradient (won't crash)
+                canvas.drawBitmap(blurredStrip, srcFade, dstFade, blurPaint);
+            }
+        }
+
+        public Bitmap fastBlur(Bitmap sentBitmap, float scale, int radius) {
+            int width = Math.round(sentBitmap.getWidth() * scale);
+            int height = Math.round(sentBitmap.getHeight() * scale);
+            sentBitmap = Bitmap.createScaledBitmap(sentBitmap, width, height, false);
+
+            Bitmap bitmap = sentBitmap.copy(sentBitmap.getConfig(), true);
+
+            if (radius < 1) {
+                return (null);
+            }
+
+            int w = bitmap.getWidth();
+            int h = bitmap.getHeight();
+
+            int[] pix = new int[w * h];
+            bitmap.getPixels(pix, 0, w, 0, 0, w, h);
+
+            int wm = w - 1;
+            int hm = h - 1;
+            int wh = w * h;
+            int div = radius + radius + 1;
+
+            int[] r = new int[wh];
+            int[] g = new int[wh];
+            int[] b = new int[wh];
+            int rsum, gsum, bsum, x, y, i, p, yp, yi, yw;
+            int[] vmin = new int[Math.max(w, h)];
+
+            int divsum = (div + 1) >> 1;
+            divsum *= divsum;
+            int[] dv = new int[256 * divsum];
+            for (i = 0; i < 256 * divsum; i++) {
+                dv[i] = (i / divsum);
+            }
+
+            yw = yi = 0;
+
+            int[][] stack = new int[div][3];
+            int stackpointer;
+            int stackstart;
+            int[] sir;
+            int rbs;
+            int r1 = radius + 1;
+            int routsum, goutsum, boutsum;
+            int rinsum, ginsum, binsum;
+
+            for (y = 0; y < h; y++) {
+                rinsum = ginsum = binsum = routsum = goutsum = boutsum = rsum = gsum = bsum = 0;
+                for (i = -radius; i <= radius; i++) {
+                    p = pix[yi + Math.min(wm, Math.max(i, 0))];
+                    sir = stack[i + radius];
+                    sir[0] = (p & 0xff0000) >> 16;
+                    sir[1] = (p & 0x00ff00) >> 8;
+                    sir[2] = (p & 0x0000ff);
+                    rbs = r1 - Math.abs(i);
+                    rsum += sir[0] * rbs;
+                    gsum += sir[1] * rbs;
+                    bsum += sir[2] * rbs;
+                    if (i > 0) {
+                        rinsum += sir[0];
+                        ginsum += sir[1];
+                        binsum += sir[2];
+                    } else {
+                        routsum += sir[0];
+                        goutsum += sir[1];
+                        boutsum += sir[2];
+                    }
+                }
+                stackpointer = radius;
+
+                for (x = 0; x < w; x++) {
+
+                    r[yi] = dv[rsum];
+                    g[yi] = dv[gsum];
+                    b[yi] = dv[bsum];
+
+                    rsum -= routsum;
+                    gsum -= goutsum;
+                    bsum -= boutsum;
+
+                    stackstart = stackpointer - radius + div;
+                    sir = stack[stackstart % div];
+
+                    routsum -= sir[0];
+                    goutsum -= sir[1];
+                    boutsum -= sir[2];
+
+                    if (y == 0) {
+                        vmin[x] = Math.min(x + radius + 1, wm);
+                    }
+                    p = pix[yw + vmin[x]];
+
+                    sir[0] = (p & 0xff0000) >> 16;
+                    sir[1] = (p & 0x00ff00) >> 8;
+                    sir[2] = (p & 0x0000ff);
+
+                    rinsum += sir[0];
+                    ginsum += sir[1];
+                    binsum += sir[2];
+
+                    rsum += rinsum;
+                    gsum += ginsum;
+                    bsum += binsum;
+
+                    stackpointer = (stackpointer + 1) % div;
+                    sir = stack[(stackpointer) % div];
+
+                    routsum += sir[0];
+                    goutsum += sir[1];
+                    boutsum += sir[2];
+
+                    rinsum -= sir[0];
+                    ginsum -= sir[1];
+                    binsum -= sir[2];
+
+                    yi++;
+                }
+                yw += w;
+            }
+            for (x = 0; x < w; x++) {
+                rinsum = ginsum = binsum = routsum = goutsum = boutsum = rsum = gsum = bsum = 0;
+                yp = -radius * w;
+                for (i = -radius; i <= radius; i++) {
+                    yi = Math.max(0, yp) + x;
+
+                    sir = stack[i + radius];
+
+                    sir[0] = r[yi];
+                    sir[1] = g[yi];
+                    sir[2] = b[yi];
+
+                    rbs = r1 - Math.abs(i);
+
+                    rsum += r[yi] * rbs;
+                    gsum += g[yi] * rbs;
+                    bsum += b[yi] * rbs;
+
+                    if (i > 0) {
+                        rinsum += sir[0];
+                        ginsum += sir[1];
+                        binsum += sir[2];
+                    } else {
+                        routsum += sir[0];
+                        goutsum += sir[1];
+                        boutsum += sir[2];
+                    }
+
+                    if (i < hm) {
+                        yp += w;
+                    }
+                }
+                yi = x;
+                stackpointer = radius;
+                for (y = 0; y < h; y++) {
+                    // Preserve alpha channel: ( 0xff000000 & pix[yi] )
+                    pix[yi] = (0xff000000 & pix[yi]) | (dv[rsum] << 16) | (dv[gsum] << 8) | dv[bsum];
+
+                    rsum -= routsum;
+                    gsum -= goutsum;
+                    bsum -= boutsum;
+
+                    stackstart = stackpointer - radius + div;
+                    sir = stack[stackstart % div];
+
+                    routsum -= sir[0];
+                    goutsum -= sir[1];
+                    boutsum -= sir[2];
+
+                    if (x == 0) {
+                        vmin[y] = Math.min(y + r1, hm) * w;
+                    }
+                    p = x + vmin[y];
+
+                    sir[0] = r[p];
+                    sir[1] = g[p];
+                    sir[2] = b[p];
+
+                    rinsum += sir[0];
+                    ginsum += sir[1];
+                    binsum += sir[2];
+
+                    rsum += rinsum;
+                    gsum += ginsum;
+                    bsum += binsum;
+
+                    stackpointer = (stackpointer + 1) % div;
+                    sir = stack[stackpointer];
+
+                    routsum += sir[0];
+                    goutsum += sir[1];
+                    boutsum += sir[2];
+
+                    rinsum -= sir[0];
+                    ginsum -= sir[1];
+                    binsum -= sir[2];
+
+                    yi += w;
+                }
+            }
+            bitmap.setPixels(pix, 0, w, 0, 0, w, h);
+
+            return (bitmap);
         }
 
         @Override
