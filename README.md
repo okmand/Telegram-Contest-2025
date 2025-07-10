@@ -3,6 +3,20 @@
 [Telegram](https://telegram.org) is a messaging app with a focus on speed and security. It’s superfast, simple and free.
 This repo contains the official source code for [Telegram App for Android](https://play.google.com/store/apps/details?id=org.telegram.messenger).
 
+## 🔧 Firebase Setup
+
+To build this project, you must generate your own `google-services.json` file:
+
+1. Create a Firebase project at [https://console.firebase.google.com](https://console.firebase.google.com)
+2. Add two Android apps with the following package names:
+    - `org.telegram.messenger.okmand`
+    - `org.telegram.messenger.okmand.beta`
+3. Enable Firebase services as needed (e.g., Analytics, Messaging)
+4. Download the `google-services.json` file and place it in:
+    - `TMessagesProj_App/google-services.json`
+5. The repository contains a placeholder dummy file for compatibility.
+
+
 ## Creating your Telegram Application
 
 We welcome all developers to use our API and source code to create applications on our platform.
