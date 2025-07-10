@@ -425,6 +425,7 @@
     <string name="SetAsAdmin">Promote to admin</string>
     <string name="EditAdminRights">Edit admin rights</string>
     <string name="DeleteMega">Delete Group</string>
+    <string name="LeaveGroup">Leave</string>
     <string name="LeaveMegaMenu">Leave group</string>
     <string name="LeaveConversationMenu">Leave conversation</string>
     <string name="DeleteMegaMenu">Delete group</string>
@@ -746,6 +747,7 @@
     <string name="ChatHistoryHidden">Hidden</string>
     <string name="ChatHistoryHiddenInfo">New members won\'t see earlier messages.</string>
     <string name="ChatHistoryHiddenInfo2">New members won\'t see more than 100 previous messages.</string>
+    <string name="ProfileJoin">Join</string>
     <string name="ProfileJoinChannel">Join Channel</string>
     <string name="ProfileJoinGroup">Join Group</string>
     <string name="GroupType">Group Type</string>
@@ -1192,6 +1194,7 @@
     <string name="SearchFrom">from:</string>
     <string name="NoRecent">No recent</string>
     <string name="Message">Message</string>
+    <string name="Discuss">Discuss</string>
     <string name="TypeMessage">Message</string>
     <string name="TypeMessageIn">Message in %1$s</string>
     <string name="TypeMessageForStars">Message for ⭐️%s</string>
@@ -3604,7 +3607,7 @@
     <string name="SuggestedPostPublish">Publish</string>
     <string name="SuggestedPostAcceptTitle">Accept Terms</string>
     <string name="Call">Call</string>
-    <string name="VideoCall">Video Call</string>
+    <string name="VideoCall">Video</string>
     <string name="Copy">Copy</string>
     <string name="Restrict">Restrict</string>
     <string name="Ban">Ban</string>
@@ -4209,6 +4212,7 @@
     <string name="VoipGroupEndAlertText">Do you want to end this voice chat?</string>
     <string name="VoipGroupLeaveAlertEndChat">End voice chat</string>
     <string name="VoipGroupViewVoiceChat">VIEW VOICE CHAT</string>
+    <string name="VoiceChat">Voice Chat</string>
     <string name="VoipGroupVoiceChat">Voice Chat</string>
     <string name="VoipGroupVideoChat">Video Chat</string>
     <string name="VoipGroupScheduledVoiceChat">Scheduled Voice Chat</string>
@@ -5260,6 +5264,8 @@
     <string name="MuteForButton">Mute for %s</string>
     <string name="DeleteMessagesOptionAlsoChat">Also clear for all members</string>
     <string name="Mute">Mute</string>
+    <string name="ProfileMute">Mute</string>
+    <string name="ProfileUnmute">Unmute</string>
     <string name="SoundOnHint">You will receive notifications with sound.</string>
     <string name="SoundOffHint">"You will receive silent notifications. "</string>
     <string name="NotificationsSound">Notification Sound</string>
@@ -5387,6 +5393,7 @@
     <string name="GiftPremium">Gift Premium</string>
     <string name="GiftPremiumGifting">Premium Gifting</string>
     <string name="SendAGift">Send a Gift</string>
+    <string name="ProfileSendAGiftSingleWord">Gift</string>
     <string name="ProfileSendAGift">Send a Gift</string>
     <string name="ProfileSendAGiftToChannel">Send a Gift</string>
     <string name="GiftPremiumActivateForFree">Activate For Free</string>
@@ -6030,6 +6037,7 @@
     <string name="LoginEmailResetPremiumRequiredMessage">Due to the high cost of SMS in your country, you need a **Telegram Premium** account to immediately reset this email via an SMS code.\n\nYou can ask a friend to gift a Premium subscription for your account **%1$s**</string>
     <string name="LoginEmailResetPleaseWait">Resetting email, please wait...</string>
     <string name="DeleteAndBlock">Delete and Block</string>
+    <string name="BlockBotSingleWord">Block</string>
     <string name="BlockBot">Block bot</string>
     <string name="AreYouSureDeleteThisChatWithBotWithCheckmark">Are you sure you want to delete the chat with **%1$s**?</string>
     <string name="DecreaseSpeed">Decrease speed</string>
