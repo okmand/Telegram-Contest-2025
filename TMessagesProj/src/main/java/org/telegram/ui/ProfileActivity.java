@@ -413,8 +413,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     private boolean[] isOnline = new boolean[1];
 
+    private final float BUTTON_TEXT_SIZE_SP = 13f;
+    private final float BUTTON_TEXT_SIZE_MIN_SP = 8f;
+
+    private final float BUTTONS_ROW_DIFF_TEXTS_TO_COLLAPSE = 0.45f;
+    private final float BUTTONS_ROW_DIFF_TEXTS_FULLY_COLLAPSED = 0.20f;
+
     private final float BUTTONS_ROW_DIFF_ICONS_TO_COLLAPSE = 0.45f;
-    private final float BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED = 0.20f;
+    private final float BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED = 0.23f;
 
     private final float BUTTONS_ROW_DIFF_TO_COLLAPSE = 0.35f;
     private final float BUTTONS_ROW_DIFF_COLLAPSED = 0.1f;
@@ -425,6 +431,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final float BUTTONS_ROW_HEIGHT = 72f;
     private final float BUTTONS_ROW_EXTRA_SPACE = 16f;
 
+    private boolean areButtonsAvailable = true;
     private LinearLayout buttonsRow;
     private List<ImageView> buttonsRowIconsList = new ArrayList();
     private List<TextView> buttonsRowTextsList = new ArrayList();
@@ -5276,18 +5283,26 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         if (rowButton.action.handledByAction) {
             View.OnClickListener onClickListener = (view -> {
-                rowButton.onActionClick();
+                if (areButtonsAvailable) {
+                    rowButton.onActionClick();
+                }
             });
             container.setOnClickListener(onClickListener);
         } else {
             if (rowButton.onClickListener != null) {
                 View.OnClickListener onClickListener = (view -> {
-                    rowButton.onClickListener.onClick(view);
+                    if (areButtonsAvailable) {
+                        rowButton.onClickListener.onClick(view);
+                    }
                 });
                 container.setOnClickListener(onClickListener);
             } else if (rowButton.onTouchListener != null) {
                 View.OnTouchListener onTouchListener = ((view, event) -> {
-                    return rowButton.onTouchListener.onTouch(view, event);
+                    if (areButtonsAvailable) {
+                        return rowButton.onTouchListener.onTouch(view, event);
+                    } else {
+                        return false;
+                    }
                 });
                 container.setOnTouchListener(onTouchListener);
             }
@@ -5318,7 +5333,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         TextView label = new TextView(context);
         label.setText(LocaleController.getString(rowButton.labelResId));
         label.setTextColor(Color.WHITE);
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, BUTTON_TEXT_SIZE_SP);
         label.setTypeface(Typeface.DEFAULT_BOLD);
         label.setGravity(Gravity.CENTER);
         buttonsRowTextsList.add(label);
@@ -7394,37 +7409,72 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             setButtonsRowHeight(height);
         }
 
-        // Interpolate alpha
-        if (diff >= BUTTONS_ROW_DIFF_TO_HIDE) {
-            buttonsRow.setAlpha(1f);
-        } else if (diff <= BUTTONS_ROW_DIFF_FULLY_TRANSPARENT) {
-            buttonsRow.setAlpha(0f);
-        } else {
-            float interpolateAlpha = (diff - BUTTONS_ROW_DIFF_FULLY_TRANSPARENT) /
-                    (BUTTONS_ROW_DIFF_TO_HIDE - BUTTONS_ROW_DIFF_FULLY_TRANSPARENT);
+        float iconScaleFactor = (diff - BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED) /
+                (BUTTONS_ROW_DIFF_ICONS_TO_COLLAPSE - BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED);
 
-            buttonsRow.setAlpha(interpolateAlpha);
+        iconScaleFactor = Math.max(0f, Math.min(1f, iconScaleFactor));
+
+        float containerScaleY;
+        if (diff >= BUTTONS_ROW_DIFF_TO_HIDE) {
+            containerScaleY = 1f;
+        } else if (diff <= BUTTONS_ROW_DIFF_FULLY_TRANSPARENT) {
+            containerScaleY = 0.8f;
+        } else {
+            float t = (diff - BUTTONS_ROW_DIFF_FULLY_TRANSPARENT) /
+                    (BUTTONS_ROW_DIFF_TO_HIDE - BUTTONS_ROW_DIFF_FULLY_TRANSPARENT);
+            containerScaleY = 0.5f + t * 0.5f;
         }
 
-        // Interpolate icons
-        if (diff >= BUTTONS_ROW_DIFF_ICONS_TO_COLLAPSE) {
-            buttonsRowIconsList.forEach(icon -> {
-                icon.setScaleX(1f);
-                icon.setScaleY(1f);
-            });
-        } else if (diff <= BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED) {
-            buttonsRowIconsList.forEach(icon -> {
-                icon.setScaleX(0f);
-                icon.setScaleY(0f);
-            });
-        } else {
-            float interpolateAlpha = (diff - BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED) /
-                    (BUTTONS_ROW_DIFF_ICONS_TO_COLLAPSE - BUTTONS_ROW_DIFF_ICONS_FULLY_COLLAPSED);
+        float adjustedScaleY = iconScaleFactor / containerScaleY;
 
-            buttonsRowIconsList.forEach(icon -> {
-                icon.setScaleX(interpolateAlpha);
-                icon.setScaleY(interpolateAlpha);
-            });
+        float finalIconScaleFactor = iconScaleFactor;
+        buttonsRowIconsList.forEach(icon -> {
+            icon.setScaleX(finalIconScaleFactor);
+            icon.setScaleY(adjustedScaleY);
+        });
+
+        // Interpolate alpha
+        if (diff >= BUTTONS_ROW_DIFF_TO_HIDE) {
+            areButtonsAvailable = true;
+
+            buttonsRow.setAlpha(1f);
+            buttonsRow.setScaleY(1f);
+        } else if (diff <= BUTTONS_ROW_DIFF_FULLY_TRANSPARENT) {
+            areButtonsAvailable = false;
+
+            buttonsRow.setAlpha(0f);
+            buttonsRow.setScaleY(0.5f);
+        } else {
+            areButtonsAvailable = true;
+
+            float t = (diff - BUTTONS_ROW_DIFF_FULLY_TRANSPARENT) /
+                    (BUTTONS_ROW_DIFF_TO_HIDE - BUTTONS_ROW_DIFF_FULLY_TRANSPARENT);
+
+            float interpolatedAlpha = t;
+
+            float interpolatedScaleY = 0.5f + t * (1f - 0.5f); // from 0.5 to 1.0
+
+            buttonsRow.setAlpha(interpolatedAlpha);
+            buttonsRow.setScaleY(interpolatedScaleY);
+        }
+
+        // Interpolate texts
+        if (diff >= BUTTONS_ROW_DIFF_TEXTS_TO_COLLAPSE) {
+            buttonsRowTextsList.forEach(text ->
+                    text.setTextSize(TypedValue.COMPLEX_UNIT_SP, BUTTON_TEXT_SIZE_SP)
+            );
+        } else if (diff <= BUTTONS_ROW_DIFF_TEXTS_FULLY_COLLAPSED) {
+            buttonsRowTextsList.forEach(text ->
+                    text.setTextSize(TypedValue.COMPLEX_UNIT_SP, BUTTON_TEXT_SIZE_MIN_SP)
+            );
+        } else {
+            float t = (diff - BUTTONS_ROW_DIFF_TEXTS_FULLY_COLLAPSED) /
+                    (BUTTONS_ROW_DIFF_TEXTS_TO_COLLAPSE - BUTTONS_ROW_DIFF_TEXTS_FULLY_COLLAPSED);
+            float interpolatedSize = BUTTON_TEXT_SIZE_MIN_SP + t * (BUTTON_TEXT_SIZE_SP - BUTTON_TEXT_SIZE_MIN_SP);
+
+            buttonsRowTextsList.forEach(text ->
+                    text.setTextSize(TypedValue.COMPLEX_UNIT_SP, interpolatedSize)
+            );
         }
     }
 
