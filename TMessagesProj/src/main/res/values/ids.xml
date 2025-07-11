@@ -59,6 +59,8 @@
     <!--  Profile Activity  -->
     <item name="profile_activity_content_container" type="id" />
     <item name="profile_activity_avatar_progress_view" type="id" />
+    <item name="profile_activity_gifts_view" type="id" />
+    <item name="profile_activity_media_counter" type="id" />
 
     <item name="profile_activity_buttons_row" type="id" />
 
@@ -74,16 +76,13 @@
     <item name="profile_avatar_view_pager" type="id" />
     <item name="profile_top_container" type="id" />
     <item name="profile_status" type="id" />
-    <item name="profile_user_name_0" type="id" />
-    <item name="profile_user_name_1" type="id" />
-    <item name="profile_chat_name" type="id" />
+    <item name="profile_user_or_chat_name" type="id" />
     <item name="profile_top_view" type="id" />
 
     <item name="profile_action_bar_menu" type="id" />
     <item name="profile_action_bar_menu_qr_code" type="id" />
     <item name="profile_action_bar_menu_other_item" type="id" />
     <item name="profile_action_bar_menu_edit_item" type="id" />
-    <item name="profile_action_bar_menu_call_item" type="id" />
     <item name="profile_action_bar_menu_search_item" type="id" />
 
 

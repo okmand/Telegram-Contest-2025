@@ -5128,6 +5128,11 @@ public class AndroidUtilities {
         return (x - a) / (b - a);
     }
 
+    public static float bezierLerp(float start, float end, float k, float t) {
+        float control = k + start + (end - start) / 2f;
+        return (1 - t) * (1 - t) * start + 2 * (1 - t) * t * control + t * t * end;
+    }
+
     public static void scaleRect(RectF rect, float scale) {
         scaleRect(rect, scale, rect.centerX(), rect.centerY());
     }
